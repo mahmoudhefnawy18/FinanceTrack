@@ -275,4 +275,52 @@ el('calcResult').innerHTML=`<div class="cards"><div class="metric">Estimated inc
 el('calcRun').onclick=calculate;
 ['taxPerson','taxYear'].forEach(id=>el(id).addEventListener('change',()=>{el('calcResult').innerHTML='';}));
 })();
+</script><script>
+/* FinanceTrack 2026/27 Class 1 NI reconciliation. Read-only: no database changes. */
+(function(){
+'use strict';
+const host=document.getElementById('ni'),panel=document.createElement('div');panel.className='panel';
+panel.innerHTML=`<h2>🧮 Class 1 NI calculator — 2026/27</h2>
+<p class="muted">Check individual payslip deductions and calculate HMRC's eight-step annual maximum for multiple employments. Existing NI entries are read without changing them.</p>
+<div class="grid2"><div><label>Pay frequency of saved NI periods</label><select id="niFrequency"><option value="auto">Detect from period dates</option><option value="monthly">Monthly</option><option value="weekly">Weekly</option></select></div><div><label>Annual reconciliation</label><select id="niCompleteness"><option value="incomplete">Year incomplete / still collecting payslips</option><option value="complete">All 2026/27 payslips entered (6 Apr–5 Apr)</option></select></div></div>
+<label><input type="checkbox" id="niUseProjected"> Include projected entries in scenario (not a refund claim)</label>
+<p><button type="button" id="niCalculate">Calculate NI</button></p><div id="niCalcResults" aria-live="polite"></div>
+<p class="muted tiny">Supported: ordinary Class 1 category A (and equivalent 8%/2% letters F, H, M, N, V), standard weekly or monthly pay periods. Directors, deferment, reduced-rate categories, irregular/4-weekly pay, aggregation of employments, Class 2/4 and special payroll adjustments require separate review. HMRC annual maximum is not a general 8% ceiling; its eight steps include additional 2% contributions.</p>
+<p class="tiny"><a href="https://www.gov.uk/hmrc-internal-manuals/national-insurance-manual/nim01251" target="_blank" rel="noopener">HMRC eight-step annual maximum</a> · <a href="https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027" target="_blank" rel="noopener">2026/27 rates</a></p>`;
+host.appendChild(panel);
+const el=id=>document.getElementById(id),fmt=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n),safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const round=n=>Math.round((n+Number.EPSILON)*100)/100;
+function frequency(r){let forced=el('niFrequency').value;if(forced!=='auto')return forced;let a=Date.parse(r.period_start+'T12:00:00Z'),b=Date.parse(r.period_end+'T12:00:00Z');let days=(b-a)/86400000+1;return days>=6&&days<=8?'weekly':days>=27&&days<=32?'monthly':null}
+function calculate(){
+ const output=el('niCalcResults'),year=Number(el('niYear').value);if(year!==2026){output.innerHTML='<p class="notice error">This calculator supports tax year 2026/27 only. Select 2026 in the NI form.</p>';return}
+ const useProjected=el('niUseProjected').checked;
+ const all=(data.fin_ni_periods||[]).filter(r=>Number(r.tax_year_start)===2026&& (useProjected||!r.is_projection));
+ if(!all.length){output.innerHTML='<p class="notice">No NI periods saved for 2026/27.</p>';return}
+ let issues=[],periods=[],aboveMain=0,aboveUEL=0,paid=0,expected=0;
+ for(const r of all){
+  const letter=String(r.category_letter||'A').trim().toUpperCase();if(!['A','F','H','M','N','V'].includes(letter)){issues.push(`${r.employer}: category ${letter} requires a separate calculation`);continue}
+  const freq=frequency(r);if(!freq){issues.push(`${r.employer}: cannot determine weekly/monthly frequency (${r.period_start}–${r.period_end})`);continue}
+  const gross=Number(r.gross_ni_pay),contrib=Number(r.employee_ni_paid);
+  if(!Number.isFinite(gross)||gross<0||!Number.isFinite(contrib)||contrib<0){issues.push(`${r.employer}: invalid pay or NI`);continue}
+  const pt=freq==='weekly'?242:1048,uel=freq==='weekly'?967:4189;
+  const band=Math.max(0,Math.min(gross,uel)-pt),excess=Math.max(0,gross-uel);
+  const calc=round(band*.08+excess*.02);
+  aboveMain+=band;aboveUEL+=excess;paid+=contrib;expected+=calc;
+  periods.push({r,calc,delta:round(contrib-calc),freq});
+ }
+ const dup=new Set(),seen=new Set();for(const {r} of periods){const key=`${r.employer}|${r.period_start}|${r.period_end}`;if(seen.has(key))dup.add(key);seen.add(key)}
+ if(dup.size)issues.push('Possible duplicate employer/pay-period entries: '+dup.size);
+ const employers=[...new Set(periods.map(p=>p.r.employer))];
+ const s1=(967-242)*53,s2=round(s1*.08),s3=aboveMain,s4=s3-s1,s5=round(Math.max(0,s4)*.02),s6=aboveUEL,s7=round(s6*.02),s8=round(s2+s5+s7);
+ const complete=el('niCompleteness').value==='complete',valid=issues.length===0&&periods.length===all.length;
+ let rows=periods.map(p=>`<tr><td>${safe(p.r.employer)}<div class="tiny muted">${safe(p.r.period_end)} · ${p.freq}${p.r.is_projection?' · Projected':''}</div></td><td>${fmt(p.r.gross_ni_pay)}</td><td>${fmt(p.r.employee_ni_paid)}</td><td>${fmt(p.calc)}</td><td>${fmt(p.delta)}</td></tr>`).join('');
+ output.innerHTML=`<div class="cards"><div class="metric">NI recorded<b>${fmt(paid)}</b></div><div class="metric">NI from pay-period bands<b>${fmt(expected)}</b></div><div class="metric">Payslip difference<b>${fmt(round(paid-expected))}</b></div><div class="metric">Employers represented<b>${employers.length}</b></div></div>
+ <div style="overflow-x:auto;margin-top:15px"><table style="width:100%;text-align:left;border-collapse:collapse"><thead><tr><th>Employer / period</th><th>NI pay</th><th>Recorded NI</th><th>Calculated</th><th>Difference</th></tr></thead><tbody>${rows}</tbody></table></div>
+ ${issues.length?`<p class="notice error"><b>Entries needing review:</b> ${issues.map(safe).join('; ')}. Unsupported entries are excluded; do not interpret totals as complete.</p>`:''}
+ <h3>HMRC eight-step annual maximum</h3><div class="compareRow"><span>1. Weekly PT–UEL × 53</span><b>${fmt(s1)}</b></div><div class="compareRow"><span>2. Step 1 × 8%</span><b>${fmt(s2)}</b></div><div class="compareRow"><span>3. Sum earnings within PT–UEL bands</span><b>${fmt(s3)}</b></div><div class="compareRow"><span>4. Step 3 − step 1</span><b>${fmt(s4)}</b></div><div class="compareRow"><span>5. Positive step 4 × 2%</span><b>${fmt(s5)}</b></div><div class="compareRow"><span>6. Sum earnings above UEL</span><b>${fmt(s6)}</b></div><div class="compareRow"><span>7. Step 6 × 2%</span><b>${fmt(s7)}</b></div><div class="compareRow"><strong>8. Maximum = steps 2 + 5 + 7</strong><b>${fmt(s8)}</b></div>
+ ${complete&&valid&&employers.length>1&&!useProjected?`<p class="notice"><b>Provisional excess above annual maximum:</b> ${fmt(Math.max(0,round(paid-s8)))}. This is a screening estimate, not an HMRC-confirmed refund. Verify complete payroll records, aggregation and special NI arrangements before making a claim.</p>`:`<p class="notice">No annual refund estimate shown. Select complete-year records with at least two employers, no projections and no unsupported entries to enable a provisional comparison. The eight steps above are illustrative for the available entries.</p>`}
+ <p class="muted tiny">A difference on one payslip can reflect payroll rounding, timing, or category details; it does not by itself establish an overpayment. The annual maximum calculation requires complete relevant earnings for the tax year.</p>`;
+}
+el('niCalculate').addEventListener('click',calculate);
+})();
 </script></body></html>
