@@ -235,4 +235,44 @@ document.getElementById('fcRecalc').onclick=calculate;
  ['taxYear','taxPerson','niYear'].forEach(id=>document.getElementById(id).addEventListener('change',report));
  report();
 })();
+</script><script>
+/* FinanceTrack: optional illustrative UK income-tax calculation, separate from saved data. */
+(function(){
+'use strict';
+const taxSection=document.getElementById('tax');
+const panel=document.createElement('div');panel.className='panel';
+panel.innerHTML=`<h2>🧮 Income tax estimate (England / Wales / Northern Ireland)</h2>
+<p class="muted">Illustrative 2026/27 non-savings income tax estimate. Scottish taxpayers, savings/dividends, student loans, marriage allowance, high-income child benefit charge, pension relief arrangements and other adjustments are not modelled. Do not use as a tax return.</p>
+<div class="grid2"><div><label>Gross taxable earnings override (£, optional)</label><input type="number" id="calcGross" min="0" step="0.01" placeholder="Use saved gross earnings"></div>
+<div><label>Additional taxable private profit (£)</label><input type="number" id="calcPrivate" min="0" step="0.01" value="0"></div>
+<div><label>Eligible deductions from taxable income (£)</label><input type="number" id="calcDeductions" min="0" step="0.01" value="0"></div>
+<div><label>Relief-at-source gross pension contributions (£)</label><input type="number" id="calcRAS" min="0" step="0.01" value="0"></div>
+<div><label>Other adjusted-net-income deductions (£)</label><input type="number" id="calcANI" min="0" step="0.01" value="0"></div>
+<div><label>PAYE already paid override (£, optional)</label><input type="number" id="calcPAYE" min="0" step="0.01" placeholder="Use saved PAYE"></div></div>
+<label><input type="checkbox" id="calcIncludeProjections"> Include projected entries</label>
+<p><button type="button" id="calcRun">Calculate illustrative tax</button></p><div id="calcResult" aria-live="polite"></div>
+<p class="muted tiny">Gross earnings should be taxable pay after any pension contributions already deducted under a net-pay arrangement. Only enter qualifying deductions once. Relief-at-source pensions extend the basic/higher-rate limits; the provider normally claims basic-rate relief. Calculations exclude Scottish rates and other taxes. Estimates are not saved or submitted.</p>`;
+taxSection.appendChild(panel);
+const el=id=>document.getElementById(id), gbp=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n), sum=(rows,k)=>rows.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
+function calculate(){
+const year=Number(el('taxYear').value),person=el('taxPerson').value;
+if(year!==2026){el('calcResult').innerHTML='<p class="notice error">This calculator currently supports 2026/27 only. Select tax year 2026.</p>';return}
+const entries=(data.fin_tax_items||[]).filter(x=>Number(x.tax_year_start)===year && (person==='Rofaida'?String(x.notes||'').includes('[Rofaida]'):!String(x.notes||'').includes('[Rofaida]')) && (el('calcIncludeProjections').checked||!x.is_projection));
+const val=id=>Math.max(0,Number(el(id).value)||0);
+const gross=el('calcGross').value===''?sum(entries,'earnings'):val('calcGross');
+const privateProfit=val('calcPrivate'),deductions=val('calcDeductions'),ras=val('calcRAS'),otherANI=val('calcANI');
+const taxableIncome=Math.max(0,gross+privateProfit-deductions);
+const adjustedNet=Math.max(0,taxableIncome-ras-otherANI);
+const allowance=Math.max(0,12570-Math.max(0,adjustedNet-100000)/2);
+const taxable=Math.max(0,taxableIncome-allowance);
+const basicLimit=37700+ras, higherLimit=125140-12570+ras;
+const basic=Math.min(taxable,basicLimit),higher=Math.max(0,Math.min(taxable,higherLimit)-basicLimit),additional=Math.max(0,taxable-higherLimit);
+const liability=basic*.20+higher*.40+additional*.45;
+const paye=el('calcPAYE').value===''?sum(entries,'tax_paid'):val('calcPAYE');
+const difference=liability-paye;
+el('calcResult').innerHTML=`<div class="cards"><div class="metric">Estimated income tax<b>${gbp(liability)}</b></div><div class="metric">PAYE recorded<b>${gbp(paye)}</b></div><div class="metric">Difference (not a bill/refund)<b>${gbp(difference)}</b></div><div class="metric">Personal allowance<b>${gbp(allowance)}</b></div></div><p class="muted tiny">Taxable income ${gbp(taxableIncome)} · Adjusted net income ${gbp(adjustedNet)} · Basic-rate portion ${gbp(basic)} · Higher-rate portion ${gbp(higher)} · Additional-rate portion ${gbp(additional)}. Pension relief and prior-year adjustments can change the result.</p>`;
+}
+el('calcRun').onclick=calculate;
+['taxPerson','taxYear'].forEach(id=>el(id).addEventListener('change',()=>{el('calcResult').innerHTML='';}));
+})();
 </script></body></html>
