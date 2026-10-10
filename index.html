@@ -211,4 +211,28 @@ const previousRender=render;
 render=function(){previousRender();calculate()};
 document.getElementById('fcRecalc').onclick=calculate;
 })();
+</script><script>
+/* FinanceTrack tax / NI reporting extension: display-only; never estimates an HMRC refund. */
+(function(){
+ const taxSection=document.getElementById('tax'),niSection=document.getElementById('ni');
+ const t=document.createElement('div');t.className='panel';t.innerHTML='<h2>📊 Tax year: actual vs projected</h2><p class="muted">Figures are grouped by the tax year and person selected above. Entries marked as projected are never included in actual totals.</p><div id="taxActualProjected"></div><p class="muted tiny">Relief expenses are recorded separately and are not automatically subtracted pound-for-pound from tax due. A full Self Assessment calculation requires income type, pension relief method, tax residency, applicable thresholds and tax-year rules.</p>';
+ taxSection.appendChild(t);
+ const n=document.createElement('div');n.className='panel';n.innerHTML='<h2>🏥 NI by employment and pay period</h2><p class="muted">Actual and projected employee contributions are separated. NI paid cannot be reliably checked from gross alone without NI category, pay frequency, earnings thresholds and special arrangements.</p><div id="niActualProjected"></div><p class="muted tiny">The HMRC multi-employment annual maximum / seven-step reconciliation is not implemented. This screen does not calculate an NI refund.</p>';niSection.appendChild(n);
+ const fmt=x=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(x||0);
+ const safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function report(){
+  if(typeof data==='undefined')return;
+  const year=Number(document.getElementById('taxYear').value),person=document.getElementById('taxPerson').value;
+  const tax=(data.fin_tax_items||[]).filter(x=>Number(x.tax_year_start)===year&&(person==='Rofaida'?String(x.notes||'').includes('[Rofaida]'):!String(x.notes||'').includes('[Rofaida]')));
+  const kinds=[['earnings','Gross earnings'],['tax_paid','PAYE tax paid'],['ni_paid','NI paid'],['pension','Pension recorded'],['relief','Relief expenses'],['payment','Tax return payment'],['refund','Tax refund']];
+  const sum=(rows,k)=>rows.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
+  document.getElementById('taxActualProjected').innerHTML='<div style="overflow-x:auto"><table style="width:100%;text-align:left;border-collapse:collapse"><thead><tr><th>Category</th><th>Actual</th><th>Projected</th></tr></thead><tbody>'+kinds.map(([k,label])=>'<tr><td>'+label+'</td><td>'+fmt(sum(tax.filter(x=>!x.is_projection),k))+'</td><td style="color:#c2410c">'+fmt(sum(tax.filter(x=>x.is_projection),k))+'</td></tr>').join('')+'</tbody></table></div>';
+  const ny=Number(document.getElementById('niYear').value),periods=(data.fin_ni_periods||[]).filter(x=>Number(x.tax_year_start)===ny);
+  const employers=[...new Set(periods.map(x=>x.employer))].sort();
+  document.getElementById('niActualProjected').innerHTML=employers.length?'<div style="overflow-x:auto"><table style="width:100%;text-align:left;border-collapse:collapse"><thead><tr><th>Employer</th><th>Actual NI</th><th>Projected NI</th><th>Actual NI-able pay</th></tr></thead><tbody>'+employers.map(name=>{let r=periods.filter(x=>x.employer===name);let actual=r.filter(x=>!x.is_projection),projected=r.filter(x=>x.is_projection);return '<tr><td>'+safe(name)+'</td><td>'+fmt(actual.reduce((a,x)=>a+Number(x.employee_ni_paid||0),0))+'</td><td style="color:#c2410c">'+fmt(projected.reduce((a,x)=>a+Number(x.employee_ni_paid||0),0))+'</td><td>'+fmt(actual.reduce((a,x)=>a+Number(x.gross_ni_pay||0),0))+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">No NI entries for this tax year.</p>';
+ }
+ const previous=render;render=function(){previous();report()};
+ ['taxYear','taxPerson','niYear'].forEach(id=>document.getElementById(id).addEventListener('change',report));
+ report();
+})();
 </script></body></html>
