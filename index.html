@@ -328,4 +328,83 @@ function calculate(){
 }
 el('niCalculate').addEventListener('click',calculate);
 })();
+</script><script>
+/* FinanceTrack entry management: delete with explicit confirmation and safe dependency checks. */
+(function(){
+'use strict';
+const configs={
+ expenseList:{table:'fin_transactions',items:()=>[...(data.fin_transactions||[])].filter(x=>x.direction==='expense').sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date))},
+ recurringList:{table:'fin_recurring_rules',items:()=>[...(data.fin_recurring_rules||[])].sort((a,b)=>a.description.localeCompare(b.description))},
+ incomeList:{table:'fin_income',items:()=>[...(data.fin_income||[])].sort((a,b)=>b.income_date.localeCompare(a.income_date))},
+ forecastList:{table:'fin_forecast_items',items:()=>[...(data.fin_forecast_items||[])].sort((a,b)=>a.due_date.localeCompare(b.due_date))},
+ historyList:{table:'fin_historical_months',items:()=>[...(data.fin_historical_months||[])].sort((a,b)=>b.month_start.localeCompare(a.month_start))},
+ taxList:{table:'fin_tax_items',items:()=>[...(data.fin_tax_items||[])].filter(x=>x.tax_year_start===Number(document.getElementById('taxYear').value)&& (document.getElementById('taxPerson').value==='Rofaida'?String(x.notes||'').includes('[Rofaida]'):!String(x.notes||'').includes('[Rofaida]'))).sort((a,b)=>(b.item_date||'').localeCompare(a.item_date||''))},
+ niList:{table:'fin_ni_periods',items:()=>[...(data.fin_ni_periods||[])].sort((a,b)=>b.period_end.localeCompare(a.period_end))},
+ potList:{table:'fin_pot_entries',items:()=>{let pot=(data.fin_pots||[]).find(x=>x.name.toLowerCase()===selectedPot.toLowerCase());return [...(data.fin_pot_entries||[])].filter(x=>x.pot_id===pot?.id).sort((a,b)=>b.entry_date.localeCompare(a.entry_date))}},
+ zakatList:{table:'fin_zakat_snapshots',items:()=>[...(data.fin_zakat_snapshots||[])].sort((a,b)=>b.calculation_date.localeCompare(a.calculation_date))}
+};
+function decorate(){
+ for(const [id,conf] of Object.entries(configs)){
+  const el=document.getElementById(id);if(!el)continue;
+  const rows=conf.items(),shown=expanded.has(id)?rows:rows.slice(0,3);
+  el.querySelectorAll('.entry').forEach((node,i)=>{
+   if(!shown[i]?.id||node.querySelector('[data-delete-table]'))return;
+   const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete';btn.dataset.deleteTable=conf.table;btn.dataset.deleteId=shown[i].id;btn.setAttribute('aria-label','Delete this entry');node.appendChild(btn);
+  });
+ }
+ // Accounts are rendered as separate panels rather than a standard list.
+ const cards=document.getElementById('accountCards');if(cards){
+  const all=[...(data.fin_accounts||[])];const panels=[...cards.querySelectorAll(':scope > .panel')];
+  panels.forEach((node,i)=>{if(!all[i]?.id)return;const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete account';btn.dataset.deleteTable='fin_accounts';btn.dataset.deleteId=all[i].id;node.appendChild(btn)});
+  panels.forEach((node,i)=>node.classList.toggle('ft-collapsed-account',i>=3&&!expanded.has('accountCards')));
+  let more=document.getElementById('ftAccountsMore');if(!more){more=document.createElement('button');more.id='ftAccountsMore';more.className='alt';more.type='button';cards.after(more)}
+  more.hidden=all.length<=3;more.textContent=expanded.has('accountCards')?'Show less':`See more (${all.length-3})`;
+ }
+ // Compact long data lists consistently to three rows.
+ for(const id of ['fxList','potRequests']){
+  const el=document.getElementById(id);if(!el)continue;let rows=[...el.querySelectorAll(':scope > .entry')];rows.forEach((node,i)=>node.hidden=i>=3&&!expanded.has(id));
+  let btn=document.getElementById('ftMore_'+id);if(!btn){btn=document.createElement('button');btn.type='button';btn.className='alt';btn.id='ftMore_'+id;el.after(btn)}
+  btn.hidden=rows.length<=3;btn.textContent=expanded.has(id)?'Show less':`See more (${rows.length-3})`;
+ }
+}
+const oldRender=render;render=function(){oldRender();decorate()};
+const oldExtra=renderExtra;renderExtra=function(){oldExtra();decorate()};
+const oldList=list;list=function(...args){oldList(...args);queueMicrotask(decorate)};
+const style=document.createElement('style');style.textContent='.ft-delete{font-size:12px;padding:7px 10px;margin-left:8px;flex-shrink:0}.ft-collapsed-account{display:none!important}[hidden]{display:none!important}';document.head.appendChild(style);
+document.addEventListener('click',async function(e){
+ const more=e.target.closest('#ftAccountsMore,[id^="ftMore_"]');if(more){const id=more.id==='ftAccountsMore'?'accountCards':more.id.slice(7);expanded.has(id)?expanded.delete(id):expanded.add(id);decorate();return}
+ const btn=e.target.closest('[data-delete-table]');if(!btn)return;
+ const table=btn.dataset.deleteTable,id=btn.dataset.deleteId;
+ const labels={fin_transactions:'expense',fin_accounts:'bank account or card',fin_income:'salary entry',fin_recurring_rules:'recurring rule',fin_forecast_items:'commitment',fin_historical_months:'historical entry',fin_tax_items:'tax entry',fin_ni_periods:'NI entry',fin_pot_entries:'family pot entry',fin_zakat_snapshots:'Zakat snapshot',fin_investments:'investment',fin_card_payments:'card payment',fin_fx_exchanges:'foreign exchange'};
+ if(!Object.hasOwn(labels,table)||!id)return;
+ if(table==='fin_accounts'){
+  const links=[['fin_transactions','account_id'],['fin_card_payments','card_account_id'],['fin_card_payments','from_account_id'],['fin_recurring_rules','account_id'],['fin_fx_exchanges','destination_account_id']];
+  for(const [t,col] of links){const {count,error}=await db.from(t).select('*',{count:'exact',head:true}).eq('owner_id',OWNER).eq(col,id);if(error){fail(error);return}if(count){flash('This account has linked transactions or payments. Move/remove those entries before deleting the account.',true);return}}
+ }
+ if(!confirm(`Permanently delete this ${labels[table]}? This cannot be undone.`))return;
+ btn.disabled=true;
+ try{
+  // Remove allocation children explicitly before an expense; the database may restrict deletion.
+  if(table==='fin_transactions'){
+   const {error:childError}=await db.from('fin_allocations').delete().eq('owner_id',OWNER).eq('transaction_id',id);
+   if(childError)throw childError;
+  }
+  const {data:deleted,error}=await db.from(table).delete().eq('owner_id',OWNER).eq('id',id).select('id');if(error)throw error;
+  if(!deleted?.length)throw Error('Nothing was deleted. Check your Supabase DELETE permissions (RLS).');
+  await load();flash('Entry deleted.');
+ }catch(err){fail(err)}finally{btn.disabled=false}
+});
+// Extra lists for investments and credit-card payments.
+function extraLists(){
+ const specs=[['investmentSummary','Investments','fin_investments','investment_date',x=>`${x.description||'Investment'} — ${money(x.amount)}`],['accountCards','Card payments','fin_card_payments','payment_date',x=>`${acc(x.card_account_id)} — ${money(x.amount)}`],['fxList','Foreign exchanges','fin_fx_exchanges','exchange_date',x=>`${x.currency} — ${money(x.gbp_received)}`]];
+ for(const [anchor,title,table,date,format] of specs){let box=document.getElementById('ftManage_'+table);if(!box){box=document.createElement('div');box.id='ftManage_'+table;box.className='panel';(document.getElementById(anchor)?.closest('.panel')||document.getElementById(anchor))?.after(box)}if(!box)continue;
+  const rows=[...(data[table]||[])].sort((a,b)=>String(b[date]||'').localeCompare(String(a[date]||'')));
+  const visible=expanded.has(box.id)?rows:rows.slice(0,3);
+  box.innerHTML=`<h2>${title} history</h2>`+(visible.map(x=>`<div class="entry"><div><strong>${esc(format(x))}</strong><span>${esc(x[date]||'')}</span></div><button class="danger ft-delete" type="button" data-delete-table="${table}" data-delete-id="${esc(x.id)}">Delete</button></div>`).join('')||'<p class="muted">No entries yet.</p>')+(rows.length>3?`<button class="alt" type="button" data-ft-more="${box.id}">${expanded.has(box.id)?'Show less':`See more (${rows.length-3})`}</button>`:'');
+ }
+}
+const priorRender=render;render=function(){priorRender();extraLists()};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ft-more]');if(!b)return;const id=b.dataset.ftMore;expanded.has(id)?expanded.delete(id):expanded.add(id);extraLists()});
+Object.assign({},{})
+})();
 </script></body></html>
