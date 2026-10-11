@@ -4,8 +4,28 @@
 nav#nav{display:flex;flex-direction:column;align-items:stretch;gap:3px;position:static;overflow:visible;padding:8px 12px;max-width:950px;margin:0 auto;background:#fff;border-radius:0 0 14px 14px}
 nav#nav button{width:100%;text-align:left;flex-shrink:1;padding:7px 12px;border-radius:8px;font-size:13px;line-height:1.15}
 nav#nav button.active{background:#1d4ed8;color:#fff}
+</style><style>
+/* Unified FinanceTrack 2026 interface */
+:root{background:#f3f6fc;color:#14264d}
+body{background:linear-gradient(180deg,#e9f0ff 0,#f5f7fc 310px,#f5f7fc 100%)}
+header{padding:23px 18px;background:linear-gradient(115deg,#14285c 0%,#254cbb 53%,#138fb7 100%);box-shadow:0 8px 26px #102d6524}
+header h1{font-size:29px;letter-spacing:-.7px}
+#identity{display:none!important}
+nav#nav{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px!important;position:relative!important;max-width:950px;margin:15px auto 10px!important;padding:14px!important;border-radius:20px!important;background:#ffffffed!important;box-shadow:0 5px 22px #183b6d12}
+nav#nav button{width:100%;min-height:51px;text-align:center!important;display:flex;justify-content:center;align-items:center;border:1px solid #dce7fa!important;border-radius:12px!important;padding:9px 6px!important;background:#f3f7ff!important;color:#27416d!important;font-size:13px!important;font-weight:750;line-height:1.25!important;white-space:normal}
+nav#nav button.active{background:linear-gradient(125deg,#234bd3,#138eb6)!important;color:white!important;border-color:transparent!important;box-shadow:0 5px 13px #1c66b92b}
+nav#nav button:hover:not(.active){background:#e6eeff!important}
+.wrap{max-width:950px}
+.panel{border:1px solid #e5eefa;box-shadow:0 6px 23px #143e7a0b;border-radius:19px}
+h2{letter-spacing:-.4px}
+button{transition:background .15s ease,transform .15s ease}
+button:active{transform:scale(.98)}
+.ft-delete{background:#fff0f0!important;color:#a12430!important;border:1px solid #f8cbd0!important;border-radius:9px!important;font-size:12px!important;padding:7px 11px!important}
+#accountCards>.panel>.ft-delete{display:block;margin:15px 0 0 auto!important}
+@media(max-width:680px){nav#nav{grid-template-columns:repeat(3,minmax(0,1fr));margin:11px 12px!important;padding:10px!important;gap:7px!important}nav#nav button{min-height:48px;font-size:12px!important}header h1{font-size:26px}}
+@media(max-width:360px){nav#nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head><body>
-<header><div style="max-width:950px;margin:auto" class="hero"><h1>💠 FinanceTrack</h1><small>Private finance • October 2026 onwards</small><div id="identity" style="margin-top:10px"></div></div></header>
+<header><div style="max-width:950px;margin:auto" class="hero"><h1>💠 FinanceTrack</h1><div id="identity" class="hidden"></div></div></header>
 <div id="login" class="wrap"><div class="panel"><h2>Secure sign in</h2><p>Use the Supabase email and password you created for FinanceTrack. Your Family Rewards PIN is not used.</p><form id="loginForm"><label>Email</label><input id="email" type="email" autocomplete="username" required><label>Password</label><input id="password" type="password" autocomplete="current-password" required><p><button type="submit">Sign in</button></p></form><div id="loginMsg"></div></div></div>
 <div id="app" class="hidden"><nav id="nav"></nav><main class="wrap"><div id="flash"></div>
 <section id="dashboard" class="section active"><h2>Overview</h2><div class="panel toolbar"><label style="margin:0">Month <input id="month" type="month" value="2026-10"></label><button class="alt" id="refresh">Refresh</button></div><div class="cards"><div class="metric">Monthly spending<b id="spend">£0.00</b></div><div class="metric">Monthly income<b id="earn">£0.00</b></div><div class="metric">Monthly budget allocation<b id="budget">£0.00</b></div><div class="metric">Investment target (10%)<b id="investTarget">£0.00</b></div></div><div class="panel"><h2>Spending by category</h2><div id="categoryBars"></div></div><div class="panel"><h2>Recent expenses</h2><div id="recent"></div></div></section>
@@ -355,7 +375,7 @@ function decorate(){
  // Accounts are rendered as separate panels rather than a standard list.
  const cards=document.getElementById('accountCards');if(cards){
   const all=[...(data.fin_accounts||[])];const panels=[...cards.querySelectorAll(':scope > .panel')];
-  panels.forEach((node,i)=>{if(!all[i]?.id)return;const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete account';btn.dataset.deleteTable='fin_accounts';btn.dataset.deleteId=all[i].id;node.appendChild(btn)});
+  panels.forEach((node,i)=>{if(!all[i]?.id||node.querySelector('[data-delete-table="fin_accounts"]'))return;const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete account';btn.dataset.deleteTable='fin_accounts';btn.dataset.deleteId=all[i].id;node.appendChild(btn)});
   panels.forEach((node,i)=>node.classList.toggle('ft-collapsed-account',i>=3&&!expanded.has('accountCards')));
   let more=document.getElementById('ftAccountsMore');if(!more){more=document.createElement('button');more.id='ftAccountsMore';more.className='alt';more.type='button';cards.after(more)}
   more.hidden=all.length<=3;more.textContent=expanded.has('accountCards')?'Show less':`See more (${all.length-3})`;
