@@ -24,6 +24,19 @@ button:active{transform:scale(.98)}
 #accountCards>.panel>.ft-delete{display:block;margin:15px 0 0 auto!important}
 @media(max-width:680px){nav#nav{grid-template-columns:repeat(3,minmax(0,1fr));margin:11px 12px!important;padding:10px!important;gap:7px!important}nav#nav button{min-height:48px;font-size:12px!important}header h1{font-size:26px}}
 @media(max-width:360px){nav#nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* FinanceTrack compact centred single-tab selector */
+nav#nav{display:block!important;position:sticky!important;top:0!important;z-index:15!important;width:min(100% - 24px,600px)!important;max-width:600px!important;margin:10px auto!important;padding:7px!important;border-radius:18px!important;background:#ffffff!important;box-shadow:0 8px 26px #12295820!important}
+nav#nav #ftTabSelector{display:block!important;width:100%!important;min-height:52px!important;padding:12px 44px 12px 20px!important;text-align:center!important;border:0!important;border-radius:13px!important;background:linear-gradient(120deg,#1d4ed8,#0891b2)!important;color:#fff!important;font-size:17px!important;font-weight:800!important;position:relative!important}
+nav#nav #ftTabSelector::after{content:'⌄';position:absolute;right:17px;top:7px;font-size:27px;font-weight:500}
+nav#nav #ftTabMenu[hidden]{display:none!important}
+nav#nav #ftTabMenu{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;padding:11px 3px 4px!important;max-height:60vh;overflow-y:auto}
+nav#nav #ftTabMenu button{display:block!important;width:100%!important;min-height:44px!important;text-align:center!important;border:1px solid #dce7fa!important;border-radius:11px!important;background:#f0f5ff!important;color:#23406c!important;font-size:13px!important;padding:9px 5px!important}
+nav#nav #ftTabMenu button.active{background:#dbeafe!important;color:#1d4ed8!important;border-color:#60a5fa!important}
+#accountCards>.panel{position:relative;padding-top:18px}
+#accountCards>.panel>.ft-delete{float:right!important;margin:0 0 10px 10px!important;border-radius:10px!important;background:#fff1f2!important;color:#be123c!important;border:1px solid #fecdd3!important}
+.entry{position:relative;flex-wrap:wrap}.entry>.ft-delete{order:-1;margin:0 0 5px auto!important;border-radius:9px!important;background:#fff1f2!important;color:#be123c!important;border:1px solid #fecdd3!important}
+@media(max-width:520px){nav#nav{width:calc(100% - 20px)!important}nav#nav #ftTabMenu{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 </style></head><body>
 <header><div style="max-width:950px;margin:auto" class="hero"><h1>💠 FinanceTrack</h1><div id="identity" class="hidden"></div></div></header>
 <div id="login" class="wrap"><div class="panel"><h2>Secure sign in</h2><p>Use the Supabase email and password you created for FinanceTrack. Your Family Rewards PIN is not used.</p><form id="loginForm"><label>Email</label><input id="email" type="email" autocomplete="username" required><label>Password</label><input id="password" type="password" autocomplete="current-password" required><p><button type="submit">Sign in</button></p></form><div id="loginMsg"></div></div></div>
@@ -52,9 +65,9 @@ const today=()=>new Date().toLocaleDateString('en-CA');const startMonth=d=>Strin
 function flash(msg,error=false){$('flash').innerHTML=`<div class="notice ${error?'error':'success'}">${esc(msg)}</div>`;window.scrollTo({top:0,behavior:'smooth'})}
 function fail(e){flash(e?.message||String(e),true)}
 const tabs=[['dashboard','🏠 Overview'],['expenses','💳 Expenses'],['accounts','🏦 Cards'],['recurring','🔁 Recurring'],['income','💷 Salary'],['forecast','🔮 Forecast'],['analytics','📈 Compare'],['history','📊 History'],['tax','🧾 Tax'],['ni','📋 NI'],['foreign','🌍 Foreign'],['family','👨‍👩‍👧 Family'],['zakat','🌙 Zakat']];
-$('nav').innerHTML=tabs.map(([id,label])=>`<button data-tab="${id}">${label}</button>`).join('');
-function showTab(t){tab=t;document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===t));document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));}
-$('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});
+$('nav').innerHTML='<button type="button" id="ftTabSelector" aria-expanded="false" aria-controls="ftTabMenu">🏠 Overview</button><div id="ftTabMenu" hidden>'+tabs.map(([id,label])=>`<button type="button" data-tab="${id}">${label}</button>`).join('')+'</div>';
+function showTab(t){tab=t;document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===t));document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));const selected=tabs.find(x=>x[0]===t);$('ftTabSelector').textContent=selected?selected[1]:'Select section';$('ftTabMenu').hidden=true;$('ftTabSelector').setAttribute('aria-expanded','false');}
+$('nav').addEventListener('click',e=>{if(e.target.closest('#ftTabSelector')){let menu=$('ftTabMenu');menu.hidden=!menu.hidden;$('ftTabSelector').setAttribute('aria-expanded',String(!menu.hidden));return}let b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});document.addEventListener('click',e=>{if(!e.target.closest('#nav')&&$('ftTabMenu')&&!$('ftTabMenu').hidden){$('ftTabMenu').hidden=true;$('ftTabSelector').setAttribute('aria-expanded','false')}});
 let touchX=0;document.querySelector('main').addEventListener('touchstart',e=>touchX=e.touches[0].clientX,{passive:true});document.querySelector('main').addEventListener('touchend',e=>{let diff=e.changedTouches[0].clientX-touchX;if(Math.abs(diff)>110&&!e.target.closest('input,select,textarea')){let i=tabs.findIndex(x=>x[0]===tab);showTab(tabs[Math.max(0,Math.min(tabs.length-1,i+(diff<0?1:-1)))][0])}},{passive:true});
 const tables=['fin_accounts','fin_categories','fin_transactions','fin_allocations','fin_card_payments','fin_recurring_rules','fin_income','fin_investments','fin_forecast_items','fin_historical_months','fin_category_rules','fin_tax_items','fin_ni_periods','fin_fx_balances','fin_fx_exchanges','fin_pots','fin_pot_entries','fin_pot_requests','fin_zakat_snapshots','fin_locum_rates'];
 async function load(){for(const t of tables){let {data:rows,error}=await db.from(t).select('*').eq('owner_id',OWNER).limit(5000);if(error)throw new Error(t+': '+error.message);data[t]=rows||[]}render()}
@@ -369,13 +382,13 @@ function decorate(){
   const rows=conf.items(),shown=expanded.has(id)?rows:rows.slice(0,3);
   el.querySelectorAll('.entry').forEach((node,i)=>{
    if(!shown[i]?.id||node.querySelector('[data-delete-table]'))return;
-   const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete';btn.dataset.deleteTable=conf.table;btn.dataset.deleteId=shown[i].id;btn.setAttribute('aria-label','Delete this entry');node.appendChild(btn);
+   const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete';btn.dataset.deleteTable=conf.table;btn.dataset.deleteId=shown[i].id;btn.setAttribute('aria-label','Delete this entry');node.insertBefore(btn,node.firstChild);
   });
  }
  // Accounts are rendered as separate panels rather than a standard list.
  const cards=document.getElementById('accountCards');if(cards){
   const all=[...(data.fin_accounts||[])];const panels=[...cards.querySelectorAll(':scope > .panel')];
-  panels.forEach((node,i)=>{if(!all[i]?.id||node.querySelector('[data-delete-table="fin_accounts"]'))return;const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete account';btn.dataset.deleteTable='fin_accounts';btn.dataset.deleteId=all[i].id;node.appendChild(btn)});
+  panels.forEach((node,i)=>{if(!all[i]?.id||node.querySelector('[data-delete-table="fin_accounts"]'))return;const btn=document.createElement('button');btn.type='button';btn.className='danger ft-delete';btn.textContent='Delete account';btn.dataset.deleteTable='fin_accounts';btn.dataset.deleteId=all[i].id;node.insertBefore(btn,node.querySelector('h2')?.nextSibling||node.firstChild)});
   panels.forEach((node,i)=>node.classList.toggle('ft-collapsed-account',i>=3&&!expanded.has('accountCards')));
   let more=document.getElementById('ftAccountsMore');if(!more){more=document.createElement('button');more.id='ftAccountsMore';more.className='alt';more.type='button';cards.after(more)}
   more.hidden=all.length<=3;more.textContent=expanded.has('accountCards')?'Show less':`See more (${all.length-3})`;
