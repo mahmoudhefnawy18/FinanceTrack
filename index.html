@@ -52,6 +52,21 @@ nav#nav #ftTabMenu button.active{background:#dbeafe!important;color:#1d4ed8!impo
 #accounts #ftPaymentHistoryPanel>.panel{margin-top:0}
 @keyframes ftReveal{from{opacity:.5;transform:translateY(-5px)}to{opacity:1;transform:none}}
 @media(max-width:540px){#accounts .ft-card-action-grid{gap:6px}#accounts .ft-action-toggle{font-size:13px;padding:13px 5px;min-height:60px}#accounts #accountChoose{font-size:17px}}
+</style><style>
+/* FinanceTrack — Compare and Cards refinements */
+#ftAddPaymentPanel .ft-payment-submit{display:inline-flex!important;width:auto!important;min-width:112px;justify-content:center;margin:0 auto 0 0!important;background:#059669!important;color:white!important}
+#ftAddPaymentPanel form p{text-align:left!important;display:flex!important;justify-content:flex-start!important}
+#accountSubmit{background:#059669!important;color:#fff!important;border-radius:12px!important;box-shadow:0 6px 16px #05966925!important}
+.ft-data-table{width:100%;border-collapse:collapse;text-align:left;font-size:15px}
+.ft-data-table th{background:#eff6ff;color:#1e40af;font-size:13px;white-space:nowrap}
+.ft-data-table th,.ft-data-table td{padding:12px 13px;border-bottom:1px solid #e2e8f0}
+.ft-data-table td:not(:first-child),.ft-data-table th:not(:first-child){text-align:right}
+.ft-data-table tbody tr:hover{background:#f8fafc}
+.ft-table-scroll{width:100%;overflow-x:auto;margin-top:12px;border:1px solid #e2e8f0;border-radius:12px}
+.ft-subheading{font-size:19px;margin:22px 0 8px;color:#172554}
+.ft-month-explorer{margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px}
+#histToggleMonth{margin:12px 0;font-weight:750}
+.ft-compare-summary>.cards{margin-bottom:12px}
 </style></head><body>
 <header><div class="hero" style="max-width:950px;margin:auto"><h1>💠 FinanceTrack</h1><div class="hidden" id="identity"></div></div></header>
 <div class="wrap" id="login"><div class="panel"><h2>Secure sign in</h2><p>Use the Supabase email and password you created for FinanceTrack. Your Family Rewards PIN is not used.</p><form id="loginForm"><label>Email</label><input autocomplete="username" id="email" required="" type="email"/><label>Password</label><input autocomplete="current-password" id="password" required="" type="password"/><p><button type="submit">Sign in</button></p></form><div id="loginMsg"></div></div></div>
@@ -62,7 +77,17 @@ nav#nav #ftTabMenu button.active{background:#dbeafe!important;color:#1d4ed8!impo
 <section class="section" id="recurring"><h2>Recurring bills</h2><div class="panel"><form id="recurringForm"><label>Description</label><input id="recDesc" placeholder="Rent" required=""/><div class="grid2"><div><label>Amount (£)</label><input id="recAmount" min="0.01" required="" step="0.01" type="number"/></div><div><label>First due date</label><input id="recDate" required="" type="date"/></div></div><div class="grid2"><div><label>Frequency</label><select id="recFreq"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div><div><label>Payment card / account</label><select id="recAccount"></select></div></div><label>Category</label><select id="recCategory"></select><p><button type="submit">Save recurring rule</button></p></form><p class="muted tiny">Rules are used for planning. Future payments are not automatically marked as paid. You can change or stop rules at any time.</p></div><div class="panel"><h2>Saved rules</h2><div id="recurringList"></div><button class="alt" data-more="recurringList">Show more</button></div></section>
 <section class="section" id="income"><h2>Salary &amp; investments</h2><div class="panel"><form id="incomeForm"><label>Employer / income source</label><input id="incomeEmployer" required=""/><div class="grid2"><div><label>Net amount received (£)</label><input id="incomeAmount" required="" step="0.01" type="number"/></div><div><label>Date received</label><input id="incomeDate" required="" type="date"/></div></div><label><input id="incomeProjection" type="checkbox"/> Projection (not yet received)</label><p><button type="submit">Save income</button></p></form></div><div class="panel"><h2>Record an investment</h2><form id="investmentForm"><div class="grid2"><div><label>Amount (£)</label><input id="investmentAmount" min="0.01" required="" step="0.01" type="number"/></div><div><label>Date</label><input id="investmentDate" required="" type="date"/></div></div><label>Description</label><input id="investmentDesc" placeholder="ISA / investment"/><p><button type="submit">Record investment</button></p></form><div id="investmentSummary"></div></div><div class="panel"><h2>Income history</h2><div id="incomeList"></div><button class="alt" data-more="incomeList">Show more</button></div></section>
 <section class="section" id="forecast"><h2>Future commitments</h2><div class="panel"><form id="forecastForm"><label>Description</label><input id="forecastDesc" placeholder="Passport fees / school fees" required=""/><div class="grid2"><div><label>Amount (£)</label><input id="forecastAmount" required="" step="0.01" type="number"/></div><div><label>Expected date</label><input id="forecastDate" required="" type="date"/></div></div><label>Type</label><select id="forecastKind"><option value="expense">Expense</option><option value="debt">Debt owed</option><option value="tax">Tax</option><option value="income">Expected income</option><option value="adjustment">Adjustment</option></select><p><button type="submit">Add commitment</button></p></form></div><div class="panel"><h2>Upcoming commitments</h2><div id="forecastList"></div><button class="alt" data-more="forecastList">Show more</button></div><div class="panel"><h2>📈 Cash-flow forecast</h2><p class="muted">Uses the latest three recorded net-salary months. Forecasts are indicative and do not modify saved transactions.</p><div class="grid2"><div><label>Monthly salary override (£, optional)</label><input id="fcSalary" min="0" placeholder="Auto: recent three months" step="0.01" type="number"/></div><div><label>Monthly spending override (£, optional)</label><input id="fcSpend" min="0" placeholder="Auto: recent spending" step="0.01" type="number"/></div></div><label><input checked="" id="fcReserve" type="checkbox"/> Reserve 10% of projected salary for investment</label><p><button id="fcRecalc" type="button">Calculate forecast</button></p><div id="fcSummary"></div><h2>Monthly projection</h2><div class="graph" id="fcGraph"></div><div id="fcDetails"></div><p class="muted tiny">Cash balances use account opening balances plus recorded bank/cash movements; check opening dates and balances. Credit card purchases are included in spending, so card repayments are not deducted a second time. Existing unpaid card balances, taxes, investments and future payments require reconciliation. Monthly spending uses historical or detailed expenses, whichever is available, and includes recurring costs; it is not added to recurring bills again. Forecasts are estimates, not tax or financial advice.</p></div></section>
-<section class="section" id="analytics"><h2>📊 Historical comparisons</h2><div class="panel"><label>Compare <select id="histMode"><option value="expenses">Monthly expenses</option><option value="salary">Monthly net salary</option></select></label><div class="cards"><div class="metric">Historical total<b id="histTotal">£0.00</b></div><div class="metric">Average per recorded month<b id="histAverage">£0.00</b></div></div><div class="graph" id="histChart"></div><p class="muted tiny">Historical totals are imported summaries; October 2026 onward uses actual saved transactions. No historical summary is added to a credit card statement.</p></div><div class="panel"><h2>Expense categories by month</h2><label>Historical month <select id="histMonth"></select></label><div id="histCategories"></div></div><div class="panel"><h2>Income and investment allocation</h2><div id="histInvest"></div></div></section>
+<section class="section" id="analytics">
+<div class="panel ft-compare-summary">
+<label class="ft-quiet-label" for="histMode">View</label><select id="histMode"><option value="expenses">Expenses</option><option value="salary">Salary</option></select>
+<div class="cards" style="margin-top:15px"><div class="metric">Total<b id="histTotal">£0.00</b></div><div class="metric">Average<b id="histAverage">£0.00</b></div></div>
+<div id="histChart" class="graph"></div>
+<h3 class="ft-subheading">Calendar years</h3><div class="ft-table-scroll"><table class="ft-data-table"><thead><tr><th>Year</th><th>Total</th><th>Monthly average</th><th>Months recorded</th></tr></thead><tbody id="histYears"></tbody></table></div>
+</div>
+<div class="panel"><h2>Categories</h2><label for="histCategory">Category</label><select id="histCategory"></select>
+<div class="ft-table-scroll"><table class="ft-data-table"><thead><tr><th>Month</th><th>Amount</th><th>Change</th></tr></thead><tbody id="histCategoryCompare"></tbody></table></div>
+<div class="ft-month-explorer"><label for="histMonth">Months</label><select id="histMonth"></select><button type="button" id="histToggleMonth" class="alt" aria-expanded="false">Show breakdown</button><div id="histCategories" hidden></div></div>
+</div></section>
 <section class="section" id="history"><h2>History &amp; backup</h2><div class="panel"><p>Download a backup of all FinanceTrack tables as an Excel workbook or individual CSV files.</p><button id="exportXlsx" type="button">Download Excel workbook (.xlsx)</button> <button class="alt" id="exportBtn" type="button">Download CSV files</button><p class="muted tiny">The export includes FinanceTrack records currently accessible to your account. Keep downloaded financial data private.</p></div><div class="panel"><h2>Previous years</h2><div id="historyList"></div></div></section>
 <section class="section" id="tax"><h2>Tax &amp; locum earnings</h2><div class="panel"><div class="toolbar"><label>Person<select id="taxPerson"><option value="Mahmoud">Mahmoud</option><option value="Rofaida">Rofaida</option></select></label><label>Tax year beginning<input id="taxYear" max="2100" min="2020" type="number" value="2026"/></label></div><form id="taxForm"><label>Employer / workplace</label><input id="taxEmployer" placeholder="LWH / Royal / MFT / Private"/><label>Description</label><input id="taxDesc" placeholder="Salary / GMC / Pension / Tax paid" required=""/><div class="grid2"><div><label>Type</label><select id="taxKind"><option value="earnings">Gross earnings</option><option value="tax_paid">Income tax paid</option><option value="ni_paid">NI paid</option><option value="pension">Pension</option><option value="relief">Tax relief expense</option><option value="payment">Tax return payment</option><option value="refund">Tax refund</option><option value="adjustment">Adjustment</option></select></div><div><label>Amount (£)</label><input id="taxAmount" required="" step="0.01" type="number"/></div></div><label>Date</label><input id="taxDate" type="date"/><label><input id="taxProjected" type="checkbox"/> Projected (red in original workbook)</label><p><button>Save tax entry</button></p></form></div><div class="panel"><h2>Tax year summary</h2><div id="taxSummary"></div><div id="taxList"></div><button class="alt" data-more="taxList">Show more</button><p class="muted tiny">Recorded amounts only; this is not an HMRC tax return calculation. Relief eligibility and tax thresholds require tax-year-specific validation.</p></div><div class="panel"><h2>Locum shift calculator</h2><div class="grid2"><div><label>Workplace and shift</label><select id="locumType"><option value="150">LWH social · £150/hr</option><option value="200">LWH unsocial · £200/hr</option><option value="75">LWH on-call · £75/hr</option><option value="150">Royal social · £150/hr</option><option value="180">Royal unsocial · £180/hr</option><option value="55">MFT weekday social · £55/hr</option><option value="70">MFT weekday unsocial · £70/hr</option><option value="70">Weekend · £70/hr</option></select></div><div><label>Hours</label><input id="locumHours" min="0" step="0.25" type="number" value="8"/></div></div><div class="metric">Estimated gross<b id="locumTotal">£0.00</b></div><p class="muted tiny">Rates supplied by you. This calculator does not post earnings automatically.</p></div></section>
 <section class="section" id="ni"><h2>National Insurance</h2><div class="panel"><form id="niForm"><div class="grid2"><div><label>Employer</label><input id="niEmployer" required=""/></div><div><label>Tax year beginning</label><input id="niYear" required="" type="number" value="2026"/></div><div><label>Period start</label><input id="niStart" required="" type="date"/></div><div><label>Period end</label><input id="niEnd" required="" type="date"/></div><div><label>NI-able gross pay (£)</label><input id="niGross" required="" step="0.01" type="number"/></div><div><label>Employee NI paid (£)</label><input id="niPaid" required="" step="0.01" type="number"/></div></div><label>NI category letter</label><input id="niLetter" placeholder="A"/><label><input id="niProjected" type="checkbox"/> Projection</label><p><button>Save NI period</button></p></form></div><div class="panel"><h2>NI payments by employer</h2><div id="niSummary"></div><div id="niList"></div><button class="alt" data-more="niList">Show more</button><p class="muted tiny">An HMRC multi-employment seven-step overpayment determination is not yet implemented; no refund estimate is asserted.</p></div></section>
@@ -177,34 +202,53 @@ for(let id of ['taxDate','niStart','niEnd','fxDate','potDate','zakatDate'])$(id)
 </script><script>
 (function(){
 const gbp=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
-const monthOf=x=>String(x||'').slice(0,7);
-const monthLabel=m=>new Date(m+'-01T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'2-digit'});
-const total=xs=>xs.reduce((s,x)=>s+Number(x.amount||0),0);
+const ym=x=>String(x||'').slice(0,7);
+const monthLabel=m=>new Date(m+'-01T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+const monthsBetween=(start,end)=>{let a=[],[y,m]=start.split('-').map(Number),[ey,em]=end.split('-').map(Number);while(y<ey||(y===ey&&m<=em)){a.push(`${y}-${String(m).padStart(2,'0')}`);if(++m>12){m=1;y++}if(a.length>240)break}return a};
+const addMonth=(m,n)=>{let d=new Date(m+'-01T12:00:00');d.setMonth(d.getMonth()+n);return ym(d.toISOString())};
+let breakdownVisible=false;
 function compare(){
- const historical=(data.fin_historical_months||[]),transactions=(data.fin_transactions||[]),income=(data.fin_income||[]);
- const mode=document.getElementById('histMode').value;
- const months={};
- for(const h of historical.filter(x=>x.section===mode)){const m=monthOf(h.month_start);months[m]=(months[m]||0)+Number(h.amount||0)}
- if(mode==='expenses'){
-   for(const t of transactions.filter(x=>x.direction==='expense'&&x.status==='posted')){const m=monthOf(t.transaction_date);if(m<'2026-10')continue;months[m]=(months[m]||0)+Number(t.amount||0)}
- }else{
-   for(const t of income.filter(x=>!x.is_projection)){const m=monthOf(t.income_date);if(m<'2026-10')continue;months[m]=(months[m]||0)+Number(t.net_amount||0)}
- }
- const keys=Object.keys(months).sort(),values=keys.map(k=>months[k]),sum=values.reduce((a,b)=>a+b,0),max=Math.max(1,...values.map(Math.abs));
+ const historical=data.fin_historical_months||[],transactions=data.fin_transactions||[],income=data.fin_income||[];
+ const mode=document.getElementById('histMode').value,values={},recorded=new Set();
+ // Historical summaries are used before Oct 2026; detailed records from Oct 2026 onward.
+ for(const h of historical.filter(x=>x.section===mode&&ym(x.month_start)<'2026-10')){const m=ym(h.month_start);values[m]=(values[m]||0)+Number(h.amount||0);recorded.add(m)}
+ if(mode==='expenses')for(const t of transactions.filter(x=>x.direction==='expense'&&x.status==='posted'&&ym(x.transaction_date)>='2026-10')){let m=ym(t.transaction_date);values[m]=(values[m]||0)+Number(t.amount||0);recorded.add(m)}
+ if(mode==='salary')for(const x of income.filter(x=>!x.is_projection&&ym(x.income_date)>='2026-10')){let m=ym(x.income_date);values[m]=(values[m]||0)+Number(x.net_amount||0);recorded.add(m)}
+ const keys=Object.keys(values).sort(),sum=keys.reduce((a,k)=>a+values[k],0),max=Math.max(1,...keys.map(k=>Math.abs(values[k])));
  document.getElementById('histTotal').textContent=gbp(sum);
  document.getElementById('histAverage').textContent=gbp(keys.length?sum/keys.length:0);
- document.getElementById('histChart').innerHTML=keys.length?keys.map((m,i)=>`<div class="graphCol" title="${monthLabel(m)}: ${gbp(values[i])}"><small>${gbp(values[i])}</small><div class="graphBar" style="height:${Math.max(2,Math.round(Math.abs(values[i])/max*155))}px"></div><small>${monthLabel(m)}</small></div>`).join(''):'<p class="muted">No records yet</p>';
- const exp=historical.filter(x=>x.section==='expenses'),available=[...new Set(exp.map(x=>monthOf(x.month_start)))].sort().reverse(),sel=document.getElementById('histMonth');const old=sel.value;sel.innerHTML=available.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');if(available.includes(old))sel.value=old;
- const chosen=sel.value,items=exp.filter(x=>monthOf(x.month_start)===chosen).sort((a,b)=>Number(b.amount)-Number(a.amount)),peak=Math.max(1,...items.map(x=>Number(x.amount)));
- document.getElementById('histCategories').innerHTML=items.length?items.map(x=>`<div style="margin:11px 0"><div class="compareRow"><span>${String(x.label||'Other').replaceAll('<','&lt;')}</span><b>${gbp(x.amount)}</b></div><div class="track"><div class="fill" style="width:${Math.max(0,Number(x.amount)/peak*100)}%"></div></div></div>`).join(''):'<p class="muted">No historical expenses for this month</p>';
- const oldSalary=total(historical.filter(x=>x.section==='salary'));
- const actualNew=income.filter(x=>!x.is_projection&&monthOf(x.income_date)>='2026-10').reduce((a,x)=>a+Number(x.net_amount||0),0);
- const invested=(data.fin_investments||[]).reduce((a,x)=>a+Number(x.amount||0),0);
- const target=(oldSalary+actualNew)*.1;
- document.getElementById('histInvest').innerHTML=`<div class="compareRow"><span>Imported net salary (Mar–Sep 2026)</span><b>${gbp(oldSalary)}</b></div><div class="compareRow"><span>Recorded net salary (Oct 2026 onward)</span><b>${gbp(actualNew)}</b></div><div class="compareRow"><span>10% allocation on these records</span><b>${gbp(target)}</b></div><div class="compareRow"><span>Investments recorded in app</span><b>${gbp(invested)}</b></div><div class="compareRow"><strong>Not yet invested (based on recorded data)</strong><b>${gbp(Math.max(0,target-invested))}</b></div><p class="muted tiny">Any investments made before app tracking must be recorded to avoid overstating the remaining allocation. Historical salary coverage starts in March 2026; this is not a lifetime investment balance.</p>`;
+ document.getElementById('histChart').innerHTML=keys.length?keys.map(m=>`<div class="graphCol" title="${monthLabel(m)}: ${gbp(values[m])}"><small>${gbp(values[m])}</small><div class="graphBar" style="height:${Math.max(2,Math.round(Math.abs(values[m])/max*155))}px"></div><small>${monthLabel(m)}</small></div>`).join(''):'<p class="muted">No records yet</p>';
+ const years=[...new Set(keys.map(m=>m.slice(0,4)))].sort().reverse();
+ document.getElementById('histYears').innerHTML=years.map(y=>{let ms=keys.filter(m=>m.startsWith(y)),t=ms.reduce((a,m)=>a+values[m],0);return `<tr><td>${y}</td><td>${gbp(t)}</td><td>${gbp(t/ms.length)}</td><td>${ms.length}</td></tr>`}).join('')||'<tr><td colspan="4">No records yet</td></tr>';
+ // Category summaries from the historical workbook and detailed expenses are never added together for the same months.
+ const byCategory={},categoryNames=new Set();
+ function add(category,month,amount){if(!category||!month)return;categoryNames.add(category);(byCategory[category]??={})[month]=((byCategory[category]||{})[month]||0)+Number(amount||0)}
+ for(const h of historical.filter(x=>x.section==='expenses'&&ym(x.month_start)<'2026-10'))add(String(h.label||'Other'),ym(h.month_start),h.amount);
+ for(const t of transactions.filter(x=>x.direction==='expense'&&x.status==='posted'&&ym(x.transaction_date)>='2026-10')){const c=(data.fin_categories||[]).find(c=>c.id===t.category_id);add(c?.name||'Uncategorised',ym(t.transaction_date),t.amount)}
+ const catSelect=document.getElementById('histCategory'),prevCat=catSelect.value;
+ const names=[...categoryNames].sort((a,b)=>a.localeCompare(b));
+ catSelect.innerHTML=names.map((name,i)=>`<option value="${i}">${esc(name)}</option>`).join('');
+ const oldName=catSelect.dataset.selectedName||prevCat;
+ let selectedName=names.includes(oldName)?oldName:names[Number(prevCat)]||names[0];
+ if(selectedName){catSelect.value=String(names.indexOf(selectedName));catSelect.dataset.selectedName=selectedName}
+ const current=ym(today()),earliest=[...keys,...Object.values(byCategory).flatMap(v=>Object.keys(v))].sort()[0]||current;
+ const allMonths=monthsBetween(earliest,addMonth(current,1));
+ let previous=null;
+ document.getElementById('histCategoryCompare').innerHTML=selectedName?allMonths.map(m=>{let amount=byCategory[selectedName]?.[m];let change=amount===undefined||previous===null?'—':previous===0?'—':`${((amount-previous)/Math.abs(previous)*100)>=0?'+':''}${((amount-previous)/Math.abs(previous)*100).toFixed(1)}%`;if(amount!==undefined)previous=amount;return `<tr><td>${monthLabel(m)}</td><td>${amount===undefined?'—':gbp(amount)}</td><td>${change}</td></tr>`}).join(''):'<tr><td colspan="3">No categories recorded yet</td></tr>';
+ const monthSelect=document.getElementById('histMonth'),old=monthSelect.value;
+ monthSelect.innerHTML=allMonths.slice().reverse().map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+ if(allMonths.includes(old))monthSelect.value=old;else monthSelect.value=current;
+ const chosen=monthSelect.value;
+ const breakdown=names.map(name=>({name,amount:byCategory[name]?.[chosen]})).filter(x=>x.amount!==undefined).sort((a,b)=>b.amount-a.amount);
+ document.getElementById('histCategories').innerHTML=breakdown.length?`<div class="ft-table-scroll"><table class="ft-data-table"><thead><tr><th>Category</th><th>Amount</th></tr></thead><tbody>${breakdown.map(x=>`<tr><td>${esc(x.name)}</td><td>${gbp(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No recorded category expenses for this month.</p>';
+ document.getElementById('histCategories').hidden=!breakdownVisible;
+ document.getElementById('histToggleMonth').textContent=breakdownVisible?'Hide breakdown':'Show breakdown';
+ document.getElementById('histToggleMonth').setAttribute('aria-expanded',String(breakdownVisible));
 }
 document.getElementById('histMode').addEventListener('change',compare);
 document.getElementById('histMonth').addEventListener('change',compare);
+document.getElementById('histCategory').addEventListener('change',e=>{e.target.dataset.selectedName=e.target.options[e.target.selectedIndex]?.text||'';compare()});
+document.getElementById('histToggleMonth').addEventListener('click',()=>{breakdownVisible=!breakdownVisible;compare()});
 const oldRender=render;render=function(){oldRender();compare()};
 })();
 </script><script>
